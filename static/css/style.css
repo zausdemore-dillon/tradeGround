@@ -1,0 +1,118 @@
+:root {
+  --ink: #111;
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --focus: #2563eb;
+  --accent: #111;
+  --accent-2: #111;
+  --danger: #b91c1c;
+}
+
+/* Reset and base */
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  color: var(--ink);
+  background: #fff; /* white background */
+}
+
+/* Centered layout */
+.center {
+  max-width: 480px;
+  margin: 10vh auto;
+  padding: 0 1rem;
+}
+
+/* Panels */
+.panel {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 22px 22px 18px;
+  box-shadow: none;
+}
+
+/* Header */
+.title {
+  font-weight: 700;
+  font-size: 32px;
+  text-align: center;
+  color: var(--accent);
+  margin: 0 0 8px 0;
+}
+.subtitle {
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+/* Forms */
+.form {
+  display: grid;
+  gap: 10px;
+  margin-top: 10px;
+}
+label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+input, select, textarea {
+  background: #fff;
+  color: var(--ink);
+  border: 1px solid var(--border);
+  padding: 12px 14px;
+  border-radius: 12px;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+/* Buttons */
+.btn {
+  border: 1px solid #111;
+  background: #111;
+  color: #fff;
+  font-weight: 700;
+  font-family: Arial, system-ui, sans-serif;
+  padding: 12px 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform .04s, filter .2s;
+}
+.btn:hover { filter: brightness(0.95); }
+.btn:active { transform: translateY(1px); }
+.btn[disabled] { opacity: .65; pointer-events: none; }
+.btn.outline {
+  background: #fff;
+  color: #111;
+  border: 1px solid #111;
+  text-align: center;
+  text-decoration: none;
+}
+
+/* Messages */
+.flash {
+  font-weight: 600;
+  text-align: center;
+  color: var(--danger);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  padding: 8px 10px;
+  border-radius: 10px;
+  margin: 8px 0;
+}
+
+/* Misc */
+.actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin: 8px 0 12px;
+}
+.muted { color: var(--muted); }
