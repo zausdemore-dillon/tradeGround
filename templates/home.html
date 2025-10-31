@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{# Inherit the base layout that includes <head>, global styles, and main page structure #}
+
+{% block title %}Home{% endblock %}
+{# Sets the page title shown in the browser tab (and used in <title> of base.html) #}
+
+{% block header %}
+  {# Header block for the page’s heading and subheading #}
+  <h1 class="title">TradeGround</h1>
+  <p class="subtitle">Welcome</p>
+{% endblock %}
+
+{% block content %}
+  <section class="panel">
+    {# Check if a user is logged in (Django provides 'user' in the template context) #}
+    {% if user.is_authenticated %}
+
+      {# Greet the logged-in user by their username #}
+      <p class="muted" style="text-align:center;">Hi {{ user.username }}!</p>
+
+      {# Display the user’s current cash balance (passed from the view context) #}
+      <p style="text-align:center; font-size:1.2em; color:green;">
+        Balance: ${{ balance|floatformat:2 }}
+      </p>
+
+      {# Account management actions (password change + logout) #}
+      <div class="actions">
+        {# Link to Django’s built-in password change form #}
+        <a class="btn outline" href="{% url 'password_change' %}">Change Password</a>
+
+        {# Secure logout form (POST required for logout in Django) #}
+        <form action="{% url 'logout' %}" method="post">
+          {% csrf_token %}
+          <button class="btn" type="submit">Log Out</button>
+        </form>
+      </div>
+
+    {% else %}
+      {# If the user is not logged in, show login & signup buttons instead #}
+      <div class="actions">
+        <a class="btn" href="{% url 'login' %}">Log In</a>
+        <a class="btn outline" href="{% url 'signup' %}">Create Account</a>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}

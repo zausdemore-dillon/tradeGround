@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Log In{% endblock %}
+
+{% block header %}
+  <h1 class="title">TradeGround</h1>
+  <p class="subtitle">Sign In</p>
+{% endblock %}
+
+{% block content %}
+  <section class="panel" id="loginPanel">
+    <form id="loginForm" class="form" method="post" autocomplete="off" action="{% url 'login' %}">
+      {% csrf_token %}
+
+      {# Display non-field errors (e.g., "Invalid username or password") #}
+      {% if form.non_field_errors %}
+        <div class="flash error">
+          {% for error in form.non_field_errors %}
+            <p>{{ error }}</p>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      {# Username field (with potential field-specific errors) #}
+      <label for="id_username">Username</label>
+      <input id="id_username" name="username" type="text" placeholder="Your username" required>
+      {% if form.username.errors %}
+        <p class="error-text">
+          {% for error in form.username.errors %}
+            {{ error }}
+          {% endfor %}
+        </p>
+      {% endif %}
+
+      {# Password field (with potential field-specific errors) #}
+      <label for="id_password">Password</label>
+      <input id="id_password" name="password" type="password" placeholder="••••••••" required>
+      {% if form.password.errors %}
+        <p class="error-text">
+          {% for error in form.password.errors %}
+            {{ error }}
+          {% endfor %}
+        </p>
+      {% endif %}
+
+      <div class="actions">
+        <button type="submit" class="btn">Log In</button>
+        <a class="btn outline" href="{% url 'signup' %}">Create Account</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}Sign Up{% endblock %}
+
+{% block header %}
+  <h1 class="title">TradeGround</h1>
+  <p class="subtitle">Create Account</p>
+{% endblock %}
+
+{% block content %}
+  <section class="panel" id="registerPanel">
+
+    {# Form-wide errors (e.g., duplicate user) #}
+    {% if form.non_field_errors %}
+      <div class="flash">
+        {% for err in form.non_field_errors %}{{ err }}{% endfor %}
+      </div>
+    {% endif %}
+
+    <form id="registerForm" class="form" method="post" autocomplete="off" action="{% url 'signup' %}">
+      {% csrf_token %}
+
+      {# Username #}
+      <label for="{{ form.username.id_for_label }}">{{ form.username.label }}</label>
+      {{ form.username }}
+      {% if form.username.help_text %}<div class="muted">{{ form.username.help_text|safe }}</div>{% endif %}
+      {% for err in form.username.errors %}<div class="msg error">{{ err }}</div>{% endfor %}
+
+      {# Password 1 (shows Django's password rules) #}
+      <label for="{{ form.password1.id_for_label }}">{{ form.password1.label }}</label>
+      {{ form.password1 }}
+      {% if form.password1.help_text %}<div class="muted">{{ form.password1.help_text|safe }}</div>{% endif %}
+      {% for err in form.password1.errors %}<div class="msg error">{{ err }}</div>{% endfor %}
+
+      {# Password 2 #}
+      <label for="{{ form.password2.id_for_label }}">{{ form.password2.label }}</label>
+      {{ form.password2 }}
+      {% if form.password2.help_text %}<div class="muted">{{ form.password2.help_text|safe }}</div>{% endif %}
+      {% for err in form.password2.errors %}<div class="msg error">{{ err }}</div>{% endfor %}
+
+      <div class="actions">
+        <button type="submit" class="btn">Sign Up</button>
+        <a class="btn outline" href="{% url 'login' %}">Back to Login</a>
+      </div>
+    </form>
+  </section>
+{% endblock %}
