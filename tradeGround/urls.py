@@ -34,4 +34,5 @@ urlpatterns = [
     path("accounts/", include("django.contrib.auth.urls")),
     path("trades/", include("trades.urls")),
     path("", home, name="home"),
+    path("sell/", include("sell.urls")),
 ]
