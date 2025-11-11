@@ -38,4 +38,5 @@ function startHoldingsPolling() {
     fetchHoldingsPrices();
     setInterval(fetchHoldingsPrices, POLLINTERVAL);
 }
+
 document.addEventListener("DOMContentLoaded", startHoldingsPolling);
