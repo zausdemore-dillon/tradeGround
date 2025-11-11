@@ -20,11 +20,13 @@
       {% block header %}{% endblock %}
     </header>
 
+    {% block base_alerts %}
     {% if messages %}
       {% for message in messages %}
         <div class="flash {{ message.tags }}">{{ message }}</div>
       {% endfor %}
     {% endif %}
+    {% endblock base_alerts %}
 
     {% block content %}{% endblock %}
   </section>

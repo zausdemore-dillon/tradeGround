@@ -15,7 +15,7 @@ class SellView(View):
         context = {
             'holdings': holdings
         }
-        return render(request, 'sell/sell.html', context)
+        return render(request, '../templates/sell.html', context)
     
     def post(self, request):
         # Handle sell form submission
