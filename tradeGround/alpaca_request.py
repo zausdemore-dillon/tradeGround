@@ -1,6 +1,7 @@
 from alpaca.data.historical import StockHistoricalDataClient
 from alpaca.data.requests import StockLatestTradeRequest
 import os
+from decimal import Decimal
 
 ALPACA_API_KEY_ID = os.getenv('ALPACA_API_KEY_ID')
 ALPACA_SECRET_KEY = os.getenv('ALPACA_SECRET_KEY')

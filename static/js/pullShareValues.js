@@ -2,7 +2,7 @@
 
 const HOLDINGS_PRICES_URL = "/trades/api/holdings/prices";
 
-const POLLINTERVAL = 3000; // 3 seconds
+const POLLINTERVAL = 10000; // 10 seconds
 
 async function fetchHoldingsPrices() {
     try {
@@ -22,7 +22,8 @@ async function fetchHoldingsPrices() {
             }
 
             if (price !== null && price !== undefined) {
-                cell.textContent = `$${price}`;
+                let numPrice = parseFloat(price).toFixed(2);
+                cell.textContent = `$${numPrice}`;
             } else {
                 cell.textContent = "—";
             }
