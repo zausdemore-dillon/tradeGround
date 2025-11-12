@@ -3,10 +3,10 @@ from alpaca.data.requests import StockLatestTradeRequest
 import os
 from decimal import Decimal
 
-ALPACA_API_KEY_ID='PKGAL7OJYM5ECHEBFDLKSHTPNY'
-ALPACA_SECRET_KEY='CLzJ64jhc4qbMbqYbejub66vVwYtZrknvpW5THRS2ySa'
+ALPACA_API_KEY_ID = os.getenv('ALPACA_API_KEY_ID')
+ALPACA_SECRET_KEY = os.getenv('ALPACA_SECRET_KEY')
 
-client = StockHistoricalDataClient(ALPACA_API_KEY_ID, ALPACA_SECRET_KEY)
+client = StockHistoricalDataClient(ALPACA_API_KEY_ID,ALPACA_SECRET_KEY)
 
 def fetch_latest_price(symbol):
 
