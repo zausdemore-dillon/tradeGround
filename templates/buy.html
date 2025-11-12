@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <style>
+            input {
+                margin:0px;
+
+            }
+            body {
+                margin-top: 10%;
+            }
+        </style>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Bootstrap demo</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+  </head>
+    <body class="container">
+    <!--Search Bar-->
+    <div class="row">
+    <input class="col" type="search" id="search"></input>
+    </div>
+    <!--Search Results Table-->
+    <div class="row">
+    <table id="cart" class="col table" >
+        <thead>
+            <tr>
+                <th>Ticker</th>
+                <th>Price/Share</th>
+                <th>Amount</th>
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+        </tbody>
+    </table>
+    </div>
+    <div class="row">
+    <button id='checkout' class="btn btn-primary col">Checkout</button>
+    </div>
+    </body>
+    <script>
+        const csrftoken = getCookie('csrftoken');
+        const input = document.querySelector('#search');
+        const cart = document.querySelector('#cart tbody');
+        const checkout = document.querySelector('#checkout');
+        const cart_data = {};
+        checkout.addEventListener('click', (e)=>{
+            fetch(
+                window.location.href + 'checkout',
+                {
+                    method: "POST",
+                    body: JSON.stringify(cart_data),
+                    headers: {
+                        'X-CSRFToken': csrftoken,
+                        'Content-Type': 'application/json' 
+                    }
+                }, 
+            )
+            .then(
+                (res)=>{
+                    if(res.status == 200){
+                        window.location.href = window.location.origin
+                    }
+                }
+            )
+        });
+        input.addEventListener('search', search);
+
+        function search(e){
+            options = {};
+            const res = fetch(
+                (window.location.href + 'get_ticker?ticker=' + input.value),
+                {
+                    method: "GET"
+                }
+            )
+            .then((res)=>{return res.json()})
+            .then((data)=>{
+                console.log(data)
+                if(data.exists){add_row(data.ticker, data.price)}
+            });
+            //returned json must be a dict with ticker, price, exists attributes
+            
+        }
+        function add_row(ticker, price){
+            data = [ticker, price];
+            tr = document.createElement('tr');
+            for(var val of data){
+                td = document.createElement('td');
+                td.innerHTML = val;
+                tr.appendChild(td);
+            }
+            amount = document.createElement('input');
+            amount.type = 'number';
+            amount.min = '1';
+            td = document.createElement('td');
+            td.appendChild(amount)
+            tr.appendChild(td);
+            td = document.createElement('td');
+            td.innerHTML = '1';
+            tr.appendChild(td);
+            amount.addEventListener('input', (e)=>{td.innerHTML = e.target.value * price; cart_data[ticker]['amount'] = e.target.value})
+            cart_data[ticker] = {symbol:ticker, amount:0}
+            cart.appendChild(tr);
+        }
+        function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    
+
+        
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+  </body>
+</html>
