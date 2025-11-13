@@ -23,6 +23,12 @@
         Balance: ${{ balance|floatformat:2 }}
       </p>
 
+      <div class="actions">
+        {# Links to main user actions: Buy Stocks, Sell Stocks, View Portfolio #}
+        <a class="btn" href="{% url 'buy:buy' %}">Buy Stocks</a>
+        <a class="btn" href="{% url 'sell:sell' %}">Sell Stocks</a>
+      </div>
+
       {# Account management actions (password change + logout) #}
       <div class="actions">
         {# Link to Django’s built-in password change form #}
