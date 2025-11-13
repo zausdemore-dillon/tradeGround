@@ -25,7 +25,7 @@
 
       <div class="actions">
         {# Links to main user actions: Buy Stocks, Sell Stocks, View Portfolio #}
-        <a class="btn" href="{#{% url 'buy' %}#}">Buy Stocks</a>
+        <a class="btn" href="{% url 'buy:buy' %}">Buy Stocks</a>
         <a class="btn" href="{% url 'sell:sell' %}">Sell Stocks</a>
       </div>
 
