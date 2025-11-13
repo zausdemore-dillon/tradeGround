@@ -64,10 +64,14 @@
 {% else %}
     <p class="empty-message">You don't have any stocks to sell.</p>
 {% endif %}
-
+    <button id="back">Home</button>
 <!-- Include the JavaScript for live price updates -->
 <script src="{% static 'js/pullShareValues.js' %}"></script>
 
+<!--back button-->
+<script>
+    document.querySelector('#back').addEventListener('click',()=>{window.location.href = window.location.origin});
+</script>
 <!-- Calculate total value from price * quantity -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
