@@ -18,12 +18,6 @@ class Services:
             raise ValueError("Could not fetch current price for the symbol.")
         current_price = Decimal(current_price)
 
-        if user.profile.current_cash_balance < current_price * quantity:
-            raise ValueError("Insufficient funds to complete purchase.")
-        # Deduct cash balance
-        user.profile.current_cash_balance -= current_price * quantity
-        user.profile.save()
-
         # Update trades
         Trades.objects.create(
             user=user,
@@ -58,10 +52,6 @@ class Services:
         if holding is None or holding.quantity < quantity:
             raise ValueError("Insufficient holdings to sell.")
         
-        # Add cash balance
-        user.profile.current_cash_balance += current_price * quantity
-        user.profile.save()
-        
         # Update trades
         Trades.objects.create(
             user=user,
@@ -77,4 +67,5 @@ class Services:
             holding.delete()
         else:
             holding.save()
+        
         

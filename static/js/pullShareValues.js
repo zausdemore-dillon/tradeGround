@@ -2,7 +2,7 @@
 
 const HOLDINGS_PRICES_URL = "/trades/api/holdings/prices";
 
-const POLLINTERVAL = 5000; // 5 seconds
+const POLLINTERVAL = 10000; // 10 seconds
 
 async function fetchHoldingsPrices() {
     try {
