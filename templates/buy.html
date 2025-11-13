@@ -84,41 +84,48 @@
             
         }
         function add_row(ticker, price){
-            data = [ticker, price];
-            tr = document.createElement('tr');
-            for(var val of data){
-                td = document.createElement('td');
+            cart_data[ticker] = 0;
+            let tr = document.createElement('tr');
+            for(var val of [ticker, price]){
+                let td = document.createElement('td');
                 td.innerHTML = val;
                 tr.appendChild(td);
             }
-            amount = document.createElement('input');
+            let amount = document.createElement('input');
             amount.type = 'number';
             amount.min = '1';
-            td = document.createElement('td');
-            td.appendChild(amount)
+            amount.value = '1';
+            let td = document.createElement('td');
+            td.appendChild(amount);
             tr.appendChild(td);
-            td = document.createElement('td');
-            td.innerHTML = '1';
-            tr.appendChild(td);
-            amount.addEventListener('input', (e)=>{td.innerHTML = e.target.value * price; cart_data[ticker]['amount'] = e.target.value})
-            cart_data[ticker] = {symbol:ticker, amount:0}
+            let total = document.createElement('td');
+            total.innerHTML = 1 * price;
+            
+            amount.addEventListener('click', closure);
+            
+            tr.appendChild(total);
             cart.appendChild(tr);
-        }
-        function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                // Does this cookie string begin with the name we want?
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
+            function closure(e){
+                total.innerHTML = e.target.value * price;
+                cart_data[ticker] = e.target.value; 
             }
         }
-        return cookieValue;
-    }
+        
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    // Does this cookie string begin with the name we want?
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
 
     
 

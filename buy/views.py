@@ -31,7 +31,7 @@ def checkout(request):
     #get data from cart
     trades = json.loads(request.body)
     for symbol in trades:
-        service.buy_stock(request.user, symbol, trades[symbol]['amount'])
+        service.buy_stock(request.user, symbol, trades[symbol])
         
     return HttpResponse(status=200)
     

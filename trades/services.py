@@ -2,6 +2,7 @@ from .models import Trades, Holdings
 from tradeGround.alpaca_request import fetch_latest_price
 from decimal import Decimal
 from django.db import transaction
+from accounts.models import Profiles
 
 class Services:
 
@@ -33,6 +34,10 @@ class Services:
         holding.quantity += quantity
         holding.avg_cost_basis = total_cost / holding.quantity
         holding.save()
+
+        #subtract from users wallet
+        profile = Profiles.objects.get(user=user)
+        profile.sub_wallet(quantity * current_price)
 
     @transaction.atomic
     def sell_stock(self, user, symbol, quantity):
@@ -67,5 +72,9 @@ class Services:
             holding.delete()
         else:
             holding.save()
+
+        #add to users wallet
+        profile = Profiles.objects.get(user=user)
+        profile.add_wallet(quantity * current_price)
         
         

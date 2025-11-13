@@ -12,3 +12,11 @@ class Profiles(models.Model):
 
     def __str__(self):
         return f"{self.user.username} Profile"
+    
+    def sub_wallet(self, amount):
+        self.current_cash_balance -= amount
+        self.save()
+
+    def add_wallet(self, amount):
+        self.current_cash_balance += amount
+        self.save()
