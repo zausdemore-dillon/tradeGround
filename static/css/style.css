@@ -116,3 +116,43 @@ input:focus, select:focus, textarea:focus {
   margin: 8px 0 12px;
 }
 .muted { color: var(--muted); }
+
+
+/* Charts */
+.chart-wrap {
+  margin: 12px 0 18px;
+}
+
+.chart-wrap canvas {
+  width: 100%;
+  display: block;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: #fff;
+}
+
+#tickerInput {
+  flex: 1;
+  max-width: 220px;
+}
+
+.chart-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.chart-tab {
+  border: none;
+  background: transparent;
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: var(--muted);
+  border-radius: 999px;
+}
+
+.chart-tab.active {
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  background: rgba(0,0,0,0.02);
+}
