@@ -8,14 +8,16 @@
 {% endblock %}
 
 {% block content %}
-  <section class="panel">
+<section class="panel">
+
 
 {% if not user.is_authenticated %}
+
   <div class="chart-wrap" style="margin-bottom: 1.5rem;">
-    <div class="chart-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
-      <h2 class="subtitle" style="margin:0;">
-        Market Overview
-      </h2>
+
+    <div class="chart-header" 
+         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+      <h2 class="subtitle" style="margin:0;">Market Overview</h2>
 
       <div class="chart-tabs" data-chart-range-tabs>
         <button type="button" class="chart-tab active" data-range="1D">24H</button>
@@ -26,8 +28,7 @@
       </div>
     </div>
 
-    <form id="tickerForm" class="actions"
-          style="justify-content:center; gap:0.5rem; margin-bottom: 0.5rem;">
+    <form id="tickerForm" class="actions" style="justify-content:center; margin-bottom: 0.5rem;">
       <input id="tickerInput"
              type="text"
              name="ticker"
@@ -37,17 +38,25 @@
       <button class="btn" type="submit">Show Chart</button>
     </form>
 
-    <p class="muted" style="text-align:center; margin-bottom: 0.5rem;">
+    <p class="muted" style="text-align:center; margin-bottom: 0.75rem;">
       Try different tickers and time ranges.
     </p>
 
     <div style="height: 260px;">
       <canvas id="priceChart" aria-label="Price Chart" role="img"></canvas>
     </div>
-  </div>
-{% endif %}
 
-{% if user.is_authenticated %}
+  </div>
+
+  <div class="actions">
+    <a class="btn" href="{% url 'login' %}">Log In</a>
+    <a class="btn outline" href="{% url 'signup' %}">Create Account</a>
+  </div>
+
+
+{# Logged-In User Dashboard #}
+
+{% else %}
 
   <p class="muted" style="text-align:center;">Hi {{ user.username }}!</p>
 
@@ -68,20 +77,58 @@
     </form>
   </div>
 
-  {# ----- Portfolio chart for logged-in users ----- #}
+
+  {# ---------- Portfolio Chart Section ---------- #}
   <div class="chart-wrap" style="margin-bottom: 1.5rem;">
-    <h2 class="subtitle" style="text-align:center; margin-bottom: 0.5rem;">
-      Your Portfolio Value Over Time
-    </h2>
+
+    <div class="chart-header"
+        style="display:flex; justify-content:center; align-items:center; margin-bottom:0.75rem;">
+
+      <div style="display:flex; align-items:center; gap:0.5rem;">
+
+        <h2 class="subtitle" style="margin:0; font-size:1.05rem;">
+          Portfolio Value
+        </h2>
+
+        {% if portfolio_value is not None %}
+          <span style="font-weight:600;">
+            ${{ portfolio_value|floatformat:2 }}
+          </span>
+
+          {% if portfolio_roi_pct is not None %}
+            {% with roi=portfolio_roi_pct %}
+              <span style="
+                  font-weight:600;
+                  color:
+                    {% if roi > 0 %}green
+                    {% elif roi < 0 %}#b91c1c
+                    {% else %}#6b7280
+                    {% endif %};
+              ">
+                {% if roi > 0 %}+{% endif %}{{ roi|floatformat:2 }}%
+              </span>
+            {% endwith %}
+          {% endif %}
+        {% endif %}
+
+      </div>
+
+    </div>
+
+
+    <div class="chart-tabs" data-portfolio-range-tabs 
+         style="display:flex; justify-content:center; margin-bottom:0.75rem;">
+      <button type="button" class="chart-tab active" data-range="1D">24H</button>
+      <button type="button" class="chart-tab" data-range="1W">1W</button>
+      <button type="button" class="chart-tab" data-range="1M">1M</button>
+      <button type="button" class="chart-tab" data-range="1Y">1Y</button>
+      <button type="button" class="chart-tab" data-range="5Y">5Y</button>
+    </div>
+
     <div style="height: 260px;">
       <canvas id="portfolioChart" aria-label="Portfolio Value Chart" role="img"></canvas>
     </div>
-  </div>
 
-{% else %}
-  <div class="actions">
-    <a class="btn" href="{% url 'login' %}">Log In</a>
-    <a class="btn outline" href="{% url 'signup' %}">Create Account</a>
   </div>
 
 {% endif %}

@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta
 
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.db.models import Min
 
 # Alpaca data-fetch helpers
 from tradeGround.alpaca_request import (
@@ -11,7 +12,7 @@ from tradeGround.alpaca_request import (
     fetch_intraday_history,
 )
 
-from .models import Holdings
+from .models import Holdings, Trades
 
 
 def price_history(request, symbol):
@@ -73,8 +74,12 @@ def holdings_prices_api(request):
 @login_required
 def portfolio_history(request):
     """
-    Compute total portfolio value over time using historical price data.
-    Returns a time series list: [{"time": ..., "value": ...}, ...]
+    Compute portfolio value over time based ONLY on holdings
+    (sum of shares * price), excluding cash balance.
+
+    - Uses intraday data for 1D, daily for 1W/1M/1Y/5Y.
+    - For each ticker, ignores price points *before* the user's first BUY trade.
+    - Returns a time series: [{"time": ..., "value": ...}, ...]
     """
     user = request.user
 
@@ -98,12 +103,23 @@ def portfolio_history(request):
     # Map ticker → share count
     quantities = {h.ticker.upper(): float(h.quantity) for h in holdings}
 
-    aggregate = {}  # Accumulates {timestamp → total portfolio value}
+    # Get earliest BUY trade time per ticker for this user
+    earliest_trades = (
+        Trades.objects
+        .filter(user=user, side=Trades.BUY)
+        .values("ticker")
+        .annotate(first_time=Min("exec_timestamp"))
+    )
+    earliest_by_ticker = {
+        row["ticker"].upper(): row["first_time"]
+        for row in earliest_trades
+    }
 
-    # Build combined time series
+    aggregate: dict[str, float] = {}  # {timestamp_str -> total holdings value}
+
+    # Build combined holdings time series
     for ticker, qty in quantities.items():
         try:
-            # Pull per-stock history based on selected range
             if cfg["type"] == "intraday":
                 series = fetch_intraday_history(ticker, hours=cfg["hours"])
             else:
@@ -112,13 +128,33 @@ def portfolio_history(request):
             print(f"Error fetching history for {ticker} in portfolio: {e}")
             series = []
 
-        # Add each price point to aggregate timeseries
-        for point in series:
-            t = point["time"]
-            v = qty * float(point["price"])  # shares × price
-            aggregate[t] = aggregate.get(t, 0.0) + v
+        first_trade_dt = earliest_by_ticker.get(ticker)
 
-    # Convert dict → sorted list for JSON
+        for point in series:
+            t_str = point["time"]  # e.g. "2025-11-19T13:45:00" or "2025-11-19"
+
+            # Parse timestamp
+            try:
+                pt_dt = datetime.fromisoformat(t_str)
+            except ValueError:
+                # If plain date "YYYY-MM-DD", attach midnight
+                pt_dt = datetime.fromisoformat(t_str + "T00:00:00")
+
+            # For intraday, compare full datetime; for daily, compare date-only
+            if first_trade_dt:
+                if cfg["type"] == "intraday":
+                    if pt_dt < first_trade_dt:
+                        continue
+                else:
+                    if pt_dt.date() < first_trade_dt.date():
+                        continue
+
+            v = qty * float(point["price"])  # shares × price at that time
+            aggregate[t_str] = aggregate.get(t_str, 0.0) + v
+
+    if not aggregate:
+        return JsonResponse([], safe=False)
+
     history = [
         {"time": t, "value": round(v, 2)}
         for t, v in sorted(aggregate.items())

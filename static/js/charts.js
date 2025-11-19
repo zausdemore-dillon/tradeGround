@@ -1,45 +1,36 @@
 // static/js/charts.js
 
-// --- API endpoints for Django views ---
 const PRICE_HISTORY_BASE_URL = "/trades/api/price-history/";
 const PORTFOLIO_HISTORY_URL = "/trades/api/portfolio-history/";
 
-// Chart.js instances (so we can update instead of recreate)
 let priceChartInstance = null;
 let portfolioChartInstance = null;
 
-// Track the currently-selected ticker + range
+// Track current selections
 let currentSymbol = "SPY";
-let currentRange = "1D";  // default range
+let currentRange = "1D";  // default: 24H
 
 console.log("charts.js loaded");
 
-
-// PRICE HISTORY CHART (single ticker)
+// Price history (ticker + range) 
 async function loadPriceHistory(symbol, range = currentRange, canvasId = "priceChart") {
-  // Normalize ticker input
   symbol = (symbol || "").trim().toUpperCase();
   if (!symbol) return;
 
-  // Update global selections
   currentSymbol = symbol;
   currentRange = range;
 
   try {
-    // Build request URL with query parameter for date range
     const url = `${PRICE_HISTORY_BASE_URL}${encodeURIComponent(symbol)}/?range=${encodeURIComponent(range)}`;
     console.log("Fetching:", url);
-
     const resp = await fetch(url);
     console.log("price history response status:", resp.status, "symbol:", symbol, "range:", range);
 
-    // Ensure the API responded successfully
     if (!resp.ok) {
       console.error("Failed to load price history", resp.status);
       return;
     }
 
-    // Validate response format
     const contentType = resp.headers.get("content-type") || "";
     if (!contentType.includes("application/json")) {
       console.error("Expected JSON, got", contentType);
@@ -54,11 +45,9 @@ async function loadPriceHistory(symbol, range = currentRange, canvasId = "priceC
       return;
     }
 
-    // Extract chart labels + values
     const labels = data.map(point => point.time);
     const prices = data.map(point => point.price);
 
-    // Find chart canvas
     const canvas = document.getElementById(canvasId);
     if (!canvas) {
       console.warn("No canvas with id", canvasId);
@@ -66,15 +55,13 @@ async function loadPriceHistory(symbol, range = currentRange, canvasId = "priceC
     }
     const ctx = canvas.getContext("2d");
 
-    // Update existing chart or create a new one
     if (priceChartInstance) {
-      // Update in-place for smoother UX
+      // update existing chart
       priceChartInstance.data.labels = labels;
       priceChartInstance.data.datasets[0].label = `${symbol} (${range})`;
       priceChartInstance.data.datasets[0].data = prices;
       priceChartInstance.update();
     } else {
-      // Create chart.js line chart
       // eslint-disable-next-line no-undef
       priceChartInstance = new Chart(ctx, {
         type: "line",
@@ -87,12 +74,12 @@ async function loadPriceHistory(symbol, range = currentRange, canvasId = "priceC
             fill: false,
             tension: 0.25,  // smooth curve
 
-            // hide point dots until hover
+            // invisible points at rest
             pointRadius: 3,
             pointBackgroundColor: "rgba(0,0,0,0)",
             pointBorderColor: "rgba(0,0,0,0)",
 
-            // hover styling
+            // hover behavior
             pointHitRadius: 10,
             pointHoverRadius: 5,
             pointHoverBackgroundColor: "rgba(17,17,17,1)",
@@ -119,7 +106,7 @@ async function loadPriceHistory(symbol, range = currentRange, canvasId = "priceC
           },
           scales: {
             x: {
-              display: false, // hide x-axis, tooltip provides timestamps
+              display: false,  // hide x labels; tooltip shows time
               ticks: {
                 autoSkip: true,
                 maxTicksLimit: 8
@@ -137,8 +124,6 @@ async function loadPriceHistory(symbol, range = currentRange, canvasId = "priceC
   }
 }
 
-
-// Initialize ticker search form + default view
 function initTickerSearch() {
   const form = document.getElementById("tickerForm");
   const input = document.getElementById("tickerInput");
@@ -155,10 +140,9 @@ function initTickerSearch() {
 
   if (!form || !input || !priceCanvas) return;
 
-  // Load default chart on page load
+  // default view (for Market Overview)
   loadPriceHistory(currentSymbol, currentRange);
 
-  // When user submits a new ticker
   form.addEventListener("submit", function (e) {
     e.preventDefault();
     const symbol = input.value;
@@ -167,19 +151,17 @@ function initTickerSearch() {
   });
 }
 
-
-// PORTFOLIO HISTORY CHART (aggregated portfolio value)
+// Portfolio history (per user, same ranges)
 async function loadPortfolioHistory(range = currentRange, canvasId = "portfolioChart") {
   const canvas = document.getElementById(canvasId);
   if (!canvas) {
-    // No portfolio chart on this page (e.g., user logged out)
+    // no portfolio chart on this page (logged out)
     return;
   }
 
   try {
     const url = `${PORTFOLIO_HISTORY_URL}?range=${encodeURIComponent(range)}`;
     console.log("Fetching portfolio history:", url);
-
     const resp = await fetch(url);
     console.log("portfolio history response status:", resp.status, "range:", range);
 
@@ -202,37 +184,39 @@ async function loadPortfolioHistory(range = currentRange, canvasId = "portfolioC
       return;
     }
 
-    // Convert to chart-readable arrays
     const labels = data.map(point => point.time);
     const values = data.map(point => point.value);
+    // Normalize so the chart shows change from first point (P&L style)
+    const base = values[0];
+    const deltaValues = values.map(v => v - base);
 
     const ctx = canvas.getContext("2d");
 
-    // Update existing chart or create new one
     if (portfolioChartInstance) {
       portfolioChartInstance.data.labels = labels;
       portfolioChartInstance.data.datasets[0].label = `Portfolio (${range})`;
-      portfolioChartInstance.data.datasets[0].data = values;
+      portfolioChartInstance.data.datasets[0].data = deltaValues;
       portfolioChartInstance.update();
     } else {
       // eslint-disable-next-line no-undef
       portfolioChartInstance = new Chart(ctx, {
         type: "line",
         data: {
+          deltaValues,
           labels: labels,
           datasets: [{
-            label: `Portfolio (${range})`,
+            label: `Portfolio ($) (${range})`,
             data: values,
             borderWidth: 2,
             fill: false,
             tension: 0.25,
 
-            // hide points until hover
+            // invisible points at rest
             pointRadius: 3,
             pointBackgroundColor: "rgba(0,0,0,0)",
             pointBorderColor: "rgba(0,0,0,0)",
 
-            // hover style
+            // hover behavior
             pointHitRadius: 10,
             pointHoverRadius: 5,
             pointHoverBackgroundColor: "rgba(17,17,17,1)",
@@ -258,8 +242,12 @@ async function loadPortfolioHistory(range = currentRange, canvasId = "portfolioC
             }
           },
           scales: {
-            x: { display: false },
-            y: { beginAtZero: false }
+            x: {
+              display: false
+            },
+            y: {
+              beginAtZero: false
+            }
           }
         }
       });
@@ -269,16 +257,13 @@ async function loadPortfolioHistory(range = currentRange, canvasId = "portfolioC
   }
 }
 
-
-// Load portfolio chart automatically if its canvas exists
 function initPortfolioChartOnPageLoad() {
   if (document.getElementById("portfolioChart")) {
     loadPortfolioHistory(currentRange);
   }
 }
 
-
-// RANGE TABS – controls (1D / 1W / 1M / 1Y / 5Y)
+// Range tabs: drive price chart, and portfolio if present
 function initRangeTabs() {
   const tabs = document.querySelectorAll(".chart-tab[data-range]");
   if (!tabs.length) {
@@ -286,7 +271,6 @@ function initRangeTabs() {
     return;
   }
 
-  // Attach click handler to each tab
   tabs.forEach((tab) => {
     tab.addEventListener("click", () => {
       const newRange = tab.dataset.range;
@@ -294,13 +278,15 @@ function initRangeTabs() {
 
       console.log("Range tab clicked:", newRange);
 
-      // Update visual active tab
+      // toggle active styling (across all tabs)
       tabs.forEach(t => t.classList.toggle("active", t === tab));
 
-      // Reload price chart with same ticker but new range
-      loadPriceHistory(currentSymbol, newRange);
+      // reload Market Overview chart if it's present
+      if (document.getElementById("priceChart")) {
+        loadPriceHistory(currentSymbol, newRange);
+      }
 
-      // If user is logged in, update portfolio chart too
+      // reload portfolio chart if it's present
       if (document.getElementById("portfolioChart")) {
         loadPortfolioHistory(newRange);
       }
@@ -308,11 +294,10 @@ function initRangeTabs() {
   });
 }
 
-
-// MAIN INITIALIZER – run after HTML finishes loading
 document.addEventListener("DOMContentLoaded", function () {
   console.log("DOMContentLoaded fired");
-  initTickerSearch();
-  initRangeTabs();
-  initPortfolioChartOnPageLoad();
+  initTickerSearch();             // only does anything on logged-out homepage
+  initRangeTabs();                // works for Market Overview tabs or Portfolio tabs
+  initPortfolioChartOnPageLoad(); // only does anything when logged in
 });
+
