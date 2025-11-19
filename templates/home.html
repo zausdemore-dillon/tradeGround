@@ -47,42 +47,43 @@
   </div>
 {% endif %}
 
-    {% if user.is_authenticated %}
+{% if user.is_authenticated %}
 
-      {# ----- Portfolio chart for logged-in users ----- #}
-      <div class="chart-wrap" style="margin-bottom: 1.5rem;">
-        <h2 class="subtitle" style="text-align:center; margin-bottom: 0.5rem;">
-          Your Portfolio Value Over Time
-        </h2>
-        <div style="height: 260px;">
-          <canvas id="portfolioChart" aria-label="Portfolio Value Chart" role="img"></canvas>
-        </div>
-      </div>
+  <p class="muted" style="text-align:center;">Hi {{ user.username }}!</p>
 
-      <p class="muted" style="text-align:center;">Hi {{ user.username }}!</p>
+  <p style="text-align:center; font-size:1.2em; color:green;">
+    Balance: ${{ balance|floatformat:2 }}
+  </p>
 
-      <p style="text-align:center; font-size:1.2em; color:green;">
-        Balance: ${{ balance|floatformat:2 }}
-      </p>
+  <div class="actions">
+    <a class="btn" href="{% url 'buy:buy' %}">Buy Stocks</a>
+    <a class="btn" href="{% url 'sell:sell' %}">Sell Stocks</a>
+  </div>
 
-      <div class="actions">
-        <a class="btn" href="{% url 'buy:buy' %}">Buy Stocks</a>
-        <a class="btn" href="{% url 'sell:sell' %}">Sell Stocks</a>
-      </div>
+  <div class="actions">
+    <a class="btn outline" href="{% url 'password_change' %}">Change Password</a>
+    <form action="{% url 'logout' %}" method="post">
+      {% csrf_token %}
+      <button class="btn" type="submit">Log Out</button>
+    </form>
+  </div>
 
-      <div class="actions">
-        <a class="btn outline" href="{% url 'password_change' %}">Change Password</a>
-        <form action="{% url 'logout' %}" method="post">
-          {% csrf_token %}
-          <button class="btn" type="submit">Log Out</button>
-        </form>
-      </div>
+  {# ----- Portfolio chart for logged-in users ----- #}
+  <div class="chart-wrap" style="margin-bottom: 1.5rem;">
+    <h2 class="subtitle" style="text-align:center; margin-bottom: 0.5rem;">
+      Your Portfolio Value Over Time
+    </h2>
+    <div style="height: 260px;">
+      <canvas id="portfolioChart" aria-label="Portfolio Value Chart" role="img"></canvas>
+    </div>
+  </div>
 
-    {% else %}
-      <div class="actions">
-        <a class="btn" href="{% url 'login' %}">Log In</a>
-        <a class="btn outline" href="{% url 'signup' %}">Create Account</a>
-      </div>
-    {% endif %}
-  </section>
+{% else %}
+  <div class="actions">
+    <a class="btn" href="{% url 'login' %}">Log In</a>
+    <a class="btn outline" href="{% url 'signup' %}">Create Account</a>
+  </div>
+
+{% endif %}
+</section>
 {% endblock %}

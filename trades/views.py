@@ -1,46 +1,32 @@
 from decimal import Decimal
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
-from django.http import HttpResponse, JsonResponse
+from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
-from django.utils import timezone
 
-from tradeGround.alpaca_request import fetch_price_history, fetch_intraday_history
-from .models import Holdings, Trades
+# Alpaca data-fetch helpers
+from tradeGround.alpaca_request import (
+    fetch_latest_price,
+    fetch_price_history,
+    fetch_intraday_history,
+)
 
-def index(request):
-    return HttpResponse("Hello, world. You're at the trades index.")
+from .models import Holdings
 
-@login_required
-def holdings_prices_api(request):
-    """
-    Return latest prices for each holding the user owns.
-    Used by pullShareValues.js to fill in the holdings table.
-    """
-    symbols = Holdings.objects.filter(user=request.user).values_list('ticker', flat=True).distinct()
-
-    data = {}
-
-    for s in symbols:
-        price = fetch_latest_price(s)
-        if price is not None:
-            data[s] = str(price)
-        else:
-            data[s] = None
-
-    return JsonResponse(data)
 
 def price_history(request, symbol):
     """
-    Price history endpoint with range support.
-
-    Query param:
-      ?range=1D | 1W | 1M | 1Y
+    Return historical price data for a symbol.
+    Range determined by ?range=1D/1W/1M/1Y/5Y.
     """
-    symbol = symbol.upper()
+    symbol = symbol.upper().strip()
+    if not symbol:
+        return JsonResponse([], safe=False)
+
+    # Determine date range (default: 1D)
     range_key = (request.GET.get("range") or "1D").upper()
 
-    # map ranges to type + window
+    # Map UI ranges → fetch parameters
     RANGE_CONFIG = {
         "1D": {"type": "intraday", "hours": 24},
         "1W": {"type": "daily", "days": 7},
@@ -51,112 +37,91 @@ def price_history(request, symbol):
 
     cfg = RANGE_CONFIG.get(range_key, RANGE_CONFIG["1D"])
 
-    try:
-        if cfg["type"] == "intraday":
-            history = fetch_intraday_history(symbol, hours=cfg["hours"])
-        else:
-            history = fetch_price_history(symbol, days=cfg["days"])
-    except Exception as e:
-        print(f"Error in price_history for {symbol}, range {range_key}: {e}")
-        history = []
-
-    # optional: fallback synthetic data so UI always has a line
-    if not history:
-        if cfg["type"] == "intraday":
-            # simple 24-point synthetic intraday series
-            points = cfg["hours"]
-            base_price = 100.0
-            now = datetime.now(timezone.utc)
-            data = []
-            for i in range(points):
-                t = now - timedelta(hours=points - i)
-                base_price += (i % 3 - 1) * 0.2
-                data.append({
-                    "time": t.isoformat(timespec="minutes"),
-                    "price": round(base_price, 2),
-                })
-            history = data
-        else:
-            days = cfg["days"]
-            today = date.today()
-            base_price = 110.0
-            data = []
-            for i in range(days):
-                day = today - timedelta(days=days - i)
-                base_price += (i % 3 - 1) * 0.8
-                data.append({
-                    "time": day.strftime("%Y-%m-%d"),
-                    "price": round(base_price, 2),
-                })
-            history = data
+    # Call correct Alpaca function based on intraday/daily
+    if cfg["type"] == "intraday":
+        history = fetch_intraday_history(symbol, hours=cfg["hours"])
+    else:
+        history = fetch_price_history(symbol, days=cfg["days"])
 
     return JsonResponse(history, safe=False)
-    
+
+
+@login_required
+def holdings_prices_api(request):
+    """
+    Return latest market prices for all of the user's holdings.
+    Output used by front-end JS for updating live share values.
+    """
+    # Get unique tickers for this user
+    symbols = (
+        Holdings.objects
+        .filter(user=request.user)
+        .values_list("ticker", flat=True)
+        .distinct()
+    )
+
+    data = {}
+
+    # Lookup each ticker's latest price
+    for s in symbols:
+        price = fetch_latest_price(s)
+        data[s] = str(price) if price is not None else None
+
+    return JsonResponse(data)
+
+
 @login_required
 def portfolio_history(request):
     """
-    Build a portfolio value time series for logged-in users
-    by replaying their trades in timestamp order.
-
-    Uses Trades model:
-
-        Trades.user             : FK to User
-        Trades.side             : "BUY" or "SELL"
-        Trades.ticker           : str (symbol)
-        Trades.shares           : Decimal (shares, >0)
-        Trades.exec_price       : Decimal (price >0)
-        Trades.exec_timestamp   : DateTime of execution
+    Compute total portfolio value over time using historical price data.
+    Returns a time series list: [{"time": ..., "value": ...}, ...]
     """
     user = request.user
 
-    # Paper trading starting cash
-    initial_cash = Decimal("10000.00")
+    # Determine requested time range (default: 1D)
+    range_key = (request.GET.get("range") or "1D").upper()
 
-    trades_qs = (
-        Trades.objects
-        .filter(user=user)
-        .order_by("exec_timestamp")
-    )
+    RANGE_CONFIG = {
+        "1D": {"type": "intraday", "hours": 24},
+        "1W": {"type": "daily", "days": 7},
+        "1M": {"type": "daily", "days": 30},
+        "1Y": {"type": "daily", "days": 365},
+        "5Y": {"type": "daily", "days": 365 * 5},
+    }
+    cfg = RANGE_CONFIG.get(range_key, RANGE_CONFIG["1D"])
 
-    if not trades_qs.exists():
-        now = timezone.now().isoformat(timespec="seconds")
-        return JsonResponse(
-            [{"time": now, "value": float(initial_cash)}],
-            safe=False,
-        )
-    
-    cash = initial_cash
-    positions = {}      # ticker -> quantity
-    last_price = {}     # ticker -> last trade price
-    series = []
+    # Get current holdings (assumes quantity constant over time)
+    holdings = Holdings.objects.filter(user=user, quantity__gt=0)
+    if not holdings.exists():
+        return JsonResponse([], safe=False)
 
-    for trade in trades_qs:
-        ticker = trade.ticker
-        qty = trade.shares
-        side = trade.side.upper()
-        price = trade.exec_price
-        ts = trade.exec_timestamp
+    # Map ticker → share count
+    quantities = {h.ticker.upper(): float(h.quantity) for h in holdings}
 
-        # BUY adds to position / reduces cash, SELL reduces position / adds cash
-        signed_qty = qty if side == Trades.BUY else -qty
+    aggregate = {}  # Accumulates {timestamp → total portfolio value}
 
-        cash -= signed_qty * price
-        positions[ticker] = positions.get(ticker, Decimal("0")) + signed_qty
-        last_price[ticker] = price
+    # Build combined time series
+    for ticker, qty in quantities.items():
+        try:
+            # Pull per-stock history based on selected range
+            if cfg["type"] == "intraday":
+                series = fetch_intraday_history(ticker, hours=cfg["hours"])
+            else:
+                series = fetch_price_history(ticker, days=cfg["days"])
+        except Exception as e:
+            print(f"Error fetching history for {ticker} in portfolio: {e}")
+            series = []
 
-        # compute portfolio value at this point in time
-        positions_value = Decimal("0")
-        for sym, q in position.items():
-            if q == 0:
-                continue
-            p = last_price.get(sym, Decimal("0"))
-            positions_value += q * p
-        
-        total_value = cash + positions_value
+        # Add each price point to aggregate timeseries
+        for point in series:
+            t = point["time"]
+            v = qty * float(point["price"])  # shares × price
+            aggregate[t] = aggregate.get(t, 0.0) + v
 
-        series.append({
-            "time": ts.isoformat(timespec="seconds"),
-            "value": float(total_value),
-        })
-    
-    return JsonResponse(series, safe=False)
+    # Convert dict → sorted list for JSON
+    history = [
+        {"time": t, "value": round(v, 2)}
+        for t, v in sorted(aggregate.items())
+    ]
+
+    return JsonResponse(history, safe=False)
