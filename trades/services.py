@@ -19,6 +19,9 @@ class Services:
             raise ValueError("Could not fetch current price for the symbol.")
         current_price = Decimal(current_price)
 
+        if user.profile.current_cash_balance < current_price * quantity:
+            raise ValueError("Insufficient funds to complete the purchase.")
+
         # Update trades
         Trades.objects.create(
             user=user,

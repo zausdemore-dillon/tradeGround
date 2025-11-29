@@ -10,9 +10,6 @@ from accounts.models import Profiles
 from django.contrib.auth import get_user_model
 from trades.services import Services
 # Create your views here.
-ALPACA_API_KEY_ID="PKGAL7OJYM5ECHEBFDLKSHTPNY"
-ALPACA_SECRET_KEY="CLzJ64jhc4qbMbqYbejub66vVwYtZrknvpW5THRS2ySa"
-ALPACA_BASE_URL="https://paper-api.alpaca.markets/v2"
 
 def index(request):
     return render(request, "../templates/buy.html")
