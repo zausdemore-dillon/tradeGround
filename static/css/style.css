@@ -23,6 +23,7 @@ body {
   max-width: 480px;
   margin: 10vh auto;
   padding: 0 1rem;
+  position: relative;
 }
 
 /* Panels */
