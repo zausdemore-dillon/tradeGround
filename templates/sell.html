@@ -4,10 +4,6 @@
 {% block title %}Sell Stocks{% endblock %}
 
 {% block content %}
-<div>
-    <a class="btn" href="{% url 'home' %}">Home</a>
-    <h1>Sell Stocks</h1>
-</div>
 
 {% block base_alerts %}
 {% endblock base_alerts %}
@@ -23,47 +19,83 @@
 {% endif %}
 
 <h2>Your Holdings</h2>
+<div class="chart-wrap">
+
+    <div class="chart-header" 
+            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+
+        <div class="chart-tabs" data-chart-range-tabs>
+            <button type="button" class="chart-tab active" data-range="1D">24H</button>
+            <button type="button" class="chart-tab" data-range="1W">1W</button>
+            <button type="button" class="chart-tab" data-range="1M">1M</button>
+            <button type="button" class="chart-tab" data-range="1Y">1Y</button>
+            <button type="button" class="chart-tab" data-range="5Y">5Y</button>
+        </div>
+    </div>
+
+    <form id="tickerForm" class="actions" style="justify-content:center; margin-bottom: 0.5rem;">
+        <select id="tickerInput"
+                name="ticker"
+                required
+                style="max-width: 220px; padding: 0.35rem 0.5rem;">
+            <option value="" disabled selected>Select Ticker</option>
+            {% for holding in holdings %}
+            <option value="{{ holding.ticker }}">
+                {{ holding.ticker }} ({{ holding.quantity }} shares)
+            </option>
+            {% endfor %}
+        </select>
+        <button class="btn" type="submit">Show Chart</button>
+    </form>
+
+    <div style="height: 260px;">
+        <canvas id="priceChart" aria-label="Price Chart" role="img"></canvas>
+    </div>
+
+</div>
 
 {% if holdings %}
-    <table class="holdings-table">
-        <thead>
-            <tr>
-                <th>Symbol</th>
-                <th>Shares Owned</th>
-                <th>Avg Cost Basis</th>
-                <th>Current Price</th>
-                <th>Total Value</th>
-                <th>Sell</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for holding in holdings %}
-            <tr>
-                <td><strong>{{ holding.ticker }}</strong></td>
-                <td>{{ holding.quantity }}</td>
-                <td>${{ holding.avg_cost_basis|floatformat:2 }}</td>
-                <td data-symbol="{{ holding.ticker }}" data-field="price">loading…</td>
-                <td data-symbol="{{ holding.ticker }}" data-field="value">—</td>
-                <td>
-                    <form method="post" class="sell-form">
-                        {% csrf_token %}
-                        <input type="hidden" name="symbol" value="{{ holding.ticker }}">
-                        <input 
-                            type="number" 
-                            name="quantity" 
-                            step="0.01" 
-                            max="{{ holding.quantity }}" 
-                            min="0.01"
-                            placeholder="Qty"
-                            required
-                        >
-                        <button type="submit" class="btn-sell">Sell</button>
-                    </form>
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <div class="holdings-wrapper">
+        <table class="holdings-table">
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Shares Owned</th>
+                    <th>Avg Cost Basis</th>
+                    <th>Current Price</th>
+                    <th>Total Value</th>
+                    <th>Sell</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for holding in holdings %}
+                <tr>
+                    <td><strong>{{ holding.ticker }}</strong></td>
+                    <td>{{ holding.quantity }}</td>
+                    <td>${{ holding.avg_cost_basis|floatformat:2 }}</td>
+                    <td data-symbol="{{ holding.ticker }}" data-field="price">loading…</td>
+                    <td data-symbol="{{ holding.ticker }}" data-field="value">—</td>
+                    <td>
+                        <form method="post" class="sell-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="symbol" value="{{ holding.ticker }}">
+                            <input 
+                                type="number" 
+                                name="quantity" 
+                                step="0.01" 
+                                max="{{ holding.quantity }}" 
+                                min="0.01"
+                                placeholder="Qty"
+                                required
+                            >
+                            <button type="submit" class="btn-sell">Sell</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 {% else %}
     <p class="empty-message">You don't have any stocks to sell.</p>
 {% endif %}
@@ -95,11 +127,6 @@ document.addEventListener("DOMContentLoaded", function() {
 </script>
 
 <style>
-    h1, h2 {
-        color: #000;
-        font-family: 'Georgia', 'Times New Roman', serif;
-        margin-bottom: 20px;
-    }
     
     .messages {
         margin-bottom: 20px;
@@ -123,6 +150,13 @@ document.addEventListener("DOMContentLoaded", function() {
         border-left-color: #dc3545;
         color: #721c24;
     }
+
+    .holdings-wrapper {
+        width: 100%;
+        max-height: 300px;   
+        overflow-y: auto;       
+        border: 1px solid #e0e0e0;
+    }   
     
     .holdings-table {
         width: 100%;
@@ -130,7 +164,9 @@ document.addEventListener("DOMContentLoaded", function() {
         border: 1px solid #e0e0e0;
     }
     
-    .holdings-table th {
+    .holdings-table thead th {
+        position: sticky;
+        top: 0;
         background: #f5f5f5;
         padding: 12px;
         text-align: left;
@@ -182,6 +218,47 @@ document.addEventListener("DOMContentLoaded", function() {
         padding: 40px;
         font-style: italic;
     }
+
+    .chart-wrap {
+    margin: 12px 0 18px;
+    }
+
+    .chart-wrap canvas {
+    width: max;
+    min-width: 500px;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #fff;
+    }
+
+    #tickerInput {
+    flex: 1;
+    max-width: 220px;
+    }
+
+    .chart-tabs {
+    display: flex;
+    gap: 6px;
+    }
+
+    .chart-tab {
+    border: none;
+    background: transparent;
+    font-size: 0.85rem;
+    padding: 4px 8px;
+    cursor: pointer;
+    color: var(--muted);
+    border-radius: 999px;
+    }
+
+    .chart-tab.active {
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    background: rgba(0,0,0,0.02);
+    }
+
 </style>
 
 {% endblock %}

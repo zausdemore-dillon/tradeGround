@@ -1,34 +1,17 @@
-<!DOCTYPE html>
-<html>
-    <head>
-        <style>
-            input {
-                margin:0px;
-
-            }
-            body {
-                margin-top: 10%;
-            }
-        </style>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Bootstrap demo</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-  </head>
-    <body class="container">
-    <a class="btn" href="{% url 'home' %}">Home</a>
+{% extends 'base.html' %}
+{% block title %}Buy Stocks{% endblock %}
+{% block header %}<h1>Buy Stocks</h1>{% endblock %}
+{% block content %}
+    <section class="userPanel">
     <!--Search Bar-->
-    <div class="row">
-        <h4>Search Ticker</h3>
-    <input class="col" type="search" id="search"></input>
-    </div>
+    <input type="search" autocomplete="off" id="search"></input>
+    <div id="search-results"></div>
     <!--Search Results Table-->
-    <div class="row">
-    <table id="cart" class="col table" >
+    <table id="cart" class="holdings-table">
         <thead>
             <tr>
                 <th>Ticker</th>
-                <th>Price/Share</th>
+                <th>Current Price</th>
                 <th>Amount</th>
                 <th>Total</th>
             </tr>
@@ -36,17 +19,21 @@
         <tbody>
         </tbody>
     </table>
-    </div>
-    <div class="row">
-    <button id='checkout' class="btn btn-primary col">Checkout</button>
-    </div>
-    </body>
+    <button id='checkout' class="btn">Checkout</button>
+    <a href="{% url 'home' %}"><button class="btn">Home</button></a>
+
+    <!--Sell specific scripts-->
     <script>
         const csrftoken = getCookie('csrftoken');
         const input = document.querySelector('#search');
         const cart = document.querySelector('#cart tbody');
         const checkout = document.querySelector('#checkout');
+        const search_results = document.querySelector('#search-results');
         const cart_data = {};
+        input.addEventListener('search', add_to_cart);
+        input.addEventListener('input', search);
+        var timer_id = setInterval(update_price, 5000);
+        //send to checkout view, cart_data needs to be Dict[ticker, qty]
         checkout.addEventListener('click', (e)=>{
             fetch(
                 window.location.href + 'checkout',
@@ -62,57 +49,122 @@
             .then(
                 (res)=>{
                     if(res.status == 200){
-                        window.location.href = window.location.origin
+                        clearInterval(timer_id);
+                        window.location.href = window.location.origin;
                     }
                 }
             )
         });
-        input.addEventListener('search', search);
-
-        function search(e){
-            options = {};
-            const res = fetch(
-                (window.location.href + 'get_ticker?ticker=' + input.value),
+        //helper element creation function
+        function createElement(e, dom_atts, html_atts){
+            el = document.createElement(e);
+            for (var att in dom_atts){
+                el[att] = dom_atts[att]
+            }
+            for (var att in html_atts){
+                el.setAttribute(att, html_atts[att])
+            }
+            return el
+        }
+        //UI add to search results [tickers]
+        function render_results(tickers){
+            var resultsContainer = document.createElement('div');
+            resultsContainer.setAttribute('class','panel');
+            tickers.sort();
+            for (ticker of tickers){
+                resultsContainer.appendChild(createElement(
+                    'p', 
+                    {
+                        innerHTML: ticker,
+                    },
+                    {
+                        value: ticker,
+                        class: 'result'
+                    }
+                ))
+            }
+            //remove previous resultsContainer
+            if(search_results.firstChild){
+                search_results.removeChild(search_results.firstChild);
+            }
+            search_results.appendChild(resultsContainer);
+        }
+        //search possible ticker symbols on keyup
+        async function search(e){
+            e.target.value = e.target.value.toUpperCase();
+            prefix = e.target.value;
+            var res = await fetch(
+                (window.location.href + 'autocomplete?prefix=' + prefix),
                 {
                     method: "GET"
                 }
             )
-            .then((res)=>{return res.json()})
-            .then((data)=>{
-                console.log(data)
-                if(data.exists){add_row(data.ticker, data.price)}
-            });
-            //returned json must be a dict with ticker, price, exists attributes
-            
-        }
-        function add_row(ticker, price){
-            cart_data[ticker] = 0;
-            let tr = document.createElement('tr');
-            for(var val of [ticker, price]){
-                let td = document.createElement('td');
-                td.innerHTML = val;
-                tr.appendChild(td);
+            if (res.status != 200){
+                return
             }
-            let amount = document.createElement('input');
-            amount.type = 'number';
-            amount.min = '1';
-            amount.value = '1';
-            let td = document.createElement('td');
-            td.appendChild(amount);
-            tr.appendChild(td);
-            let total = document.createElement('td');
-            total.innerHTML = 1 * price;
-            
-            amount.addEventListener('click', closure);
-            
-            tr.appendChild(total);
-            cart.appendChild(tr);
-            function closure(e){
-                total.innerHTML = e.target.value * price;
-                cart_data[ticker] = e.target.value; 
+            res = await res.json()
+            console.log(res);
+            render_results(res);
+        }
+        //validate ticker and add to table
+        async function add_to_cart(e){
+            console.log(e.target);
+            try{    
+                var res = await fetch(
+                    (window.location.href + 'validate?ticker=' + e.target.value),
+                    {
+                        method: "GET"
+                    }
+                );
+                if (res.status != 200){
+                    throw new Error('Validate response not 200');
+                }
+                res = await res.json()
+                if (!res.exists){
+                    throw new Error('json parse error');
+                }
+                add_row(e.target.value, res.price);
+                e.target.value = '';
+                e.target.innerHTML = '';
+            } catch(e){
+                console.log(e);
             }
         }
         
+        function add_row(ticker, price){
+            if(ticker in cart_data){
+                return;
+            }
+            cart_data[ticker] = 1;
+            let tr = document.createElement('tr');
+            tr.appendChild(createElement('td', {innerHTML:ticker, value:ticker}, {class:'ticker'}));
+            tr.appendChild(createElement('td', {innerHTML:price, value:price}, {class:'price'}));
+            
+            let amount = createElement(
+                'input',
+                {
+                    type:'number',
+                    min:'1',
+                    value:'1'
+                },
+                {class:'amount'}
+            );
+            amount.addEventListener('click', closure);
+            let td = document.createElement('td');
+            td.appendChild(amount);
+            tr.appendChild(td);
+            
+            var total = createElement('td',{innerHTML: price, value: price},{class:'total'})
+            tr.appendChild(total);
+            cart.appendChild(tr);
+            
+            function closure(e){
+                total.innerHTML = parseInt(e.target.value * price);
+                total.value = parseInt(e.target.value * price);
+                cart_data[ticker] = e.target.value; 
+            }
+        }
+        //used to get val from csrf token cookie
         function getCookie(name) {
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
@@ -129,10 +181,79 @@
             return cookieValue;
         }
 
-    
-
-        
+        async function update_price(){
+            var rows = document.querySelectorAll('tbody tr');
+            for (row of rows){
+                var ticker = row.querySelector('.ticker').value;
+                var amount = row.querySelector('.amount').value;
+                var res = await fetch(
+                    (window.location.href + 'validate?ticker=' + ticker),
+                    {
+                        method: "GET"
+                    }
+                );
+                if (res.status != 200){
+                    throw new Error('Validate response not 200');
+                }
+                res = await res.json()
+                if (!res.exists){
+                    throw new Error('json parse error');
+                }
+                row.querySelector('.price').value = res.price;
+                row.querySelector('.price').innerHTML = res.price;
+                row.querySelector('.total').value = parseInt(res.price * amount);
+                row.querySelector('.total').innerHTML = parseInt(res.price * amount);
+                
+            }
+        }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
-  </body>
-</html>
+    <style>
+        #search {
+            margin-bottom: 10px;
+            display: block;
+            width: 25%;
+        }
+        
+        #search:focus + #search-results{
+            display: block;
+        }
+
+        #search:not(:focus) + #search-results{
+            display: none;
+        }
+
+        #search-results {
+            position: absolute;
+            width: 25%;
+        }
+
+        .holdings-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #e0e0e0;
+        margin-bottom: 10px;
+        min-height: 50%;
+        }
+    
+        .holdings-table th {
+            background: #f5f5f5;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 13px;
+            border-bottom: 2px solid #000;
+        }
+        
+        .holdings-table td {
+            padding: 15px 12px;
+            border-bottom: 1px solid #e0e0e0;
+            width: 25%;
+        }
+        
+        .holdings-table tr:hover {
+            background: #fafafa;
+        }
+    </style>
+    </section>
+{% endblock%}

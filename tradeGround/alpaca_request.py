@@ -172,4 +172,3 @@ def fetch_intraday_history(symbol: str, hours: int = 24):
     except Exception as e:
         print(f"Error fetching intraday history for {symbol}: {e}")
         return []
-
