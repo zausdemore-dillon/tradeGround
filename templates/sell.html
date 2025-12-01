@@ -1,0 +1,264 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sell Stocks{% endblock %}
+
+{% block content %}
+
+{% block base_alerts %}
+{% endblock base_alerts %}
+
+{% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    </div>
+{% endif %}
+
+<h2>Your Holdings</h2>
+<div class="chart-wrap">
+
+    <div class="chart-header" 
+            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+
+        <div class="chart-tabs" data-chart-range-tabs>
+            <button type="button" class="chart-tab active" data-range="1D">24H</button>
+            <button type="button" class="chart-tab" data-range="1W">1W</button>
+            <button type="button" class="chart-tab" data-range="1M">1M</button>
+            <button type="button" class="chart-tab" data-range="1Y">1Y</button>
+            <button type="button" class="chart-tab" data-range="5Y">5Y</button>
+        </div>
+    </div>
+
+    <form id="tickerForm" class="actions" style="justify-content:center; margin-bottom: 0.5rem;">
+        <select id="tickerInput"
+                name="ticker"
+                required
+                style="max-width: 220px; padding: 0.35rem 0.5rem;">
+            <option value="" disabled selected>Select Ticker</option>
+            {% for holding in holdings %}
+            <option value="{{ holding.ticker }}">
+                {{ holding.ticker }} ({{ holding.quantity }} shares)
+            </option>
+            {% endfor %}
+        </select>
+        <button class="btn" type="submit">Show Chart</button>
+    </form>
+
+    <div style="height: 260px;">
+        <canvas id="priceChart" aria-label="Price Chart" role="img"></canvas>
+    </div>
+
+</div>
+
+{% if holdings %}
+    <div class="holdings-wrapper">
+        <table class="holdings-table">
+            <thead>
+                <tr>
+                    <th>Symbol</th>
+                    <th>Shares Owned</th>
+                    <th>Avg Cost Basis</th>
+                    <th>Current Price</th>
+                    <th>Total Value</th>
+                    <th>Sell</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for holding in holdings %}
+                <tr>
+                    <td><strong>{{ holding.ticker }}</strong></td>
+                    <td>{{ holding.quantity }}</td>
+                    <td>${{ holding.avg_cost_basis|floatformat:2 }}</td>
+                    <td data-symbol="{{ holding.ticker }}" data-field="price">loading…</td>
+                    <td data-symbol="{{ holding.ticker }}" data-field="value">—</td>
+                    <td>
+                        <form method="post" class="sell-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="symbol" value="{{ holding.ticker }}">
+                            <input 
+                                type="number" 
+                                name="quantity" 
+                                step="0.01" 
+                                max="{{ holding.quantity }}" 
+                                min="0.01"
+                                placeholder="Qty"
+                                required
+                            >
+                            <button type="submit" class="btn-sell">Sell</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+{% else %}
+    <p class="empty-message">You don't have any stocks to sell.</p>
+{% endif %}
+
+<!-- Include the JavaScript for live price updates -->
+<script src="{% static 'js/pullShareValues.js' %}"></script>
+
+<!-- Calculate total value from price * quantity -->
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    setInterval(function() {
+        document.querySelectorAll('[data-field="price"]').forEach(priceCell => {
+            const priceText = priceCell.textContent;
+            
+            if (priceText.startsWith('$')) {
+                const price = parseFloat(priceText.replace('$', ''));
+                const row = priceCell.closest('tr');
+                const quantity = parseFloat(row.cells[1].textContent);
+                const valueCell = row.querySelector('[data-field="value"]');
+                
+                if (!isNaN(price) && !isNaN(quantity)) {
+                    const totalValue = price * quantity;
+                    valueCell.textContent = `$${totalValue.toFixed(2)}`;
+                }
+            }
+        });
+    }, 500);
+});
+</script>
+
+<style>
+    
+    .messages {
+        margin-bottom: 20px;
+    }
+    
+    .alert {
+        padding: 12px 20px;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        border-left: 4px solid;
+    }
+    
+    .alert-success {
+        background: #f0f9f4;
+        border-left-color: #28a745;
+        color: #155724;
+    }
+    
+    .alert-error {
+        background: #fef2f2;
+        border-left-color: #dc3545;
+        color: #721c24;
+    }
+
+    .holdings-wrapper {
+        width: 100%;
+        max-height: 300px;   
+        overflow-y: auto;       
+        border: 1px solid #e0e0e0;
+    }   
+    
+    .holdings-table {
+        width: 100%;
+        border-collapse: collapse;
+        border: 1px solid #e0e0e0;
+    }
+    
+    .holdings-table thead th {
+        position: sticky;
+        top: 0;
+        background: #f5f5f5;
+        padding: 12px;
+        text-align: left;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 13px;
+        border-bottom: 2px solid #000;
+    }
+    
+    .holdings-table td {
+        padding: 15px 12px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+    
+    .holdings-table tr:hover {
+        background: #fafafa;
+    }
+    
+    .sell-form {
+        display: flex;
+        gap: 10px;
+    }
+    
+    .sell-form input {
+        width: 80px;
+        padding: 6px 8px;
+        border: 1px solid #ccc;
+        border-radius: 2px;
+    }
+    
+    .btn-sell {
+        padding: 6px 16px;
+        background: #000;
+        color: white;
+        border: none;
+        border-radius: 2px;
+        cursor: pointer;
+        text-transform: uppercase;
+        font-size: 12px;
+    }
+    
+    .btn-sell:hover {
+        background: #333;
+    }
+    
+    .empty-message {
+        text-align: center;
+        color: #666;
+        padding: 40px;
+        font-style: italic;
+    }
+
+    .chart-wrap {
+    margin: 12px 0 18px;
+    }
+
+    .chart-wrap canvas {
+    width: max;
+    min-width: 500px;
+    height: auto;
+    display: block;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background: #fff;
+    }
+
+    #tickerInput {
+    flex: 1;
+    max-width: 220px;
+    }
+
+    .chart-tabs {
+    display: flex;
+    gap: 6px;
+    }
+
+    .chart-tab {
+    border: none;
+    background: transparent;
+    font-size: 0.85rem;
+    padding: 4px 8px;
+    cursor: pointer;
+    color: var(--muted);
+    border-radius: 999px;
+    }
+
+    .chart-tab.active {
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    background: rgba(0,0,0,0.02);
+    }
+
+</style>
+
+{% endblock %}

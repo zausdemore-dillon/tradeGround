@@ -14,21 +14,48 @@
   {% block head_extra %}{% endblock %}
 </head>
 <body>
+    {% block navbar %}
+    {% if user.is_authenticated %}
+    <div class="tg-nav">
+      <div class="nav-left">
+        <h1 class="nav-logo">TradeGround</h1>
+      </div>
+
+      <div class="nav-right">
+        <a href="{% url 'home' %}">Home</a>
+        <a href="{% url 'buy:buy' %}">Buy Stocks</a>
+        <a href="{% url 'sell:sell' %}">Sell Stocks</a>
+        <a href="{% url 'password_change' %}">Change Password</a>
+        <form action="{% url 'logout' %}" method="post">
+          {% csrf_token %}
+          <button class="nav-btn" type="submit">Log Out</button>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+    {% endblock %}
 
   <section class="center">
     <header>
       {% block header %}{% endblock %}
     </header>
 
+    {% block base_alerts %}
     {% if messages %}
       {% for message in messages %}
         <div class="flash {{ message.tags }}">{{ message }}</div>
       {% endfor %}
     {% endif %}
+    {% endblock base_alerts %}
 
     {% block content %}{% endblock %}
   </section>
 
-  {% block scripts %}{% endblock %}
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{# <script src="{% static 'js/pullShareValues.js' %}"></script> #}
+  <script src="{% static 'js/charts.js' %}"></script>
+{% endblock %}
+
 </body>
 </html>

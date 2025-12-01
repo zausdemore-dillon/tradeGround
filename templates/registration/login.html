@@ -1,51 +1,40 @@
 {% extends "base.html" %}
+
 {% block title %}Log In{% endblock %}
 
 {% block header %}
   <h1 class="title">TradeGround</h1>
-  <p class="subtitle">Sign In</p>
+  <p class="subtitle">Sign in to your paper trading account</p>
 {% endblock %}
 
 {% block content %}
-  <section class="panel" id="loginPanel">
-    <form id="loginForm" class="form" method="post" autocomplete="off" action="{% url 'login' %}">
-      {% csrf_token %}
+  <section class="panel" style="width: 480px;">
 
-      {# Display non-field errors (e.g., "Invalid username or password") #}
-      {% if form.non_field_errors %}
-        <div class="flash error">
-          {% for error in form.non_field_errors %}
-            <p>{{ error }}</p>
-          {% endfor %}
-        </div>
-      {% endif %}
-
-      {# Username field (with potential field-specific errors) #}
-      <label for="id_username">Username</label>
-      <input id="id_username" name="username" type="text" placeholder="Your username" required>
-      {% if form.username.errors %}
-        <p class="error-text">
-          {% for error in form.username.errors %}
-            {{ error }}
-          {% endfor %}
-        </p>
-      {% endif %}
-
-      {# Password field (with potential field-specific errors) #}
-      <label for="id_password">Password</label>
-      <input id="id_password" name="password" type="password" placeholder="••••••••" required>
-      {% if form.password.errors %}
-        <p class="error-text">
-          {% for error in form.password.errors %}
-            {{ error }}
-          {% endfor %}
-        </p>
-      {% endif %}
-
-      <div class="actions">
-        <button type="submit" class="btn">Log In</button>
-        <a class="btn outline" href="{% url 'signup' %}">Create Account</a>
+    {# ----- Login form ----- #}
+    {% if form.errors %}
+      <div class="flash">
+        Please correct the errors below and try again.
       </div>
+    {% endif %}
+
+    <form method="post" class="form" novalidate>
+      {% csrf_token %}
+      {% for field in form %}
+        <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+        {{ field }}
+        {% if field.errors %}
+          <div class="flash">
+            {{ field.errors|striptags }}
+          </div>
+        {% endif %}
+      {% endfor %}
+
+      <button class="btn" type="submit">Log In</button>
     </form>
+
+    <div class="actions" style="margin-top: 10px;">
+      <a class="btn outline" href="{% url 'signup' %}">Create Account</a>
+    </div>
   </section>
 {% endblock %}
+
