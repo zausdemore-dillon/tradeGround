@@ -31,6 +31,7 @@
         const cart_data = {};
         input.addEventListener('search', add_to_cart);
         input.addEventListener('input', search);
+        var timer_id = setInterval(update_price, 5000);
         //send to checkout view, cart_data needs to be Dict[ticker, qty]
         checkout.addEventListener('click', (e)=>{
             fetch(
@@ -47,7 +48,8 @@
             .then(
                 (res)=>{
                     if(res.status == 200){
-                        window.location.href = window.location.origin
+                        clearInterval(timer_id);
+                        window.location.href = window.location.origin;
                     }
                 }
             )
@@ -105,29 +107,37 @@
         }
         //validate ticker and add to table
         async function add_to_cart(e){
-            var res = await fetch(
-                (window.location.href + 'validate?ticker=' + e.target.value),
-                {
-                    method: "GET"
+            console.log(e.target);
+            try{    
+                var res = await fetch(
+                    (window.location.href + 'validate?ticker=' + e.target.value),
+                    {
+                        method: "GET"
+                    }
+                );
+                if (res.status != 200){
+                    throw new Error('Validate response not 200');
                 }
-            );
-            if (status != 200){
-                return;
+                res = await res.json()
+                if (!res.exists){
+                    throw new Error('json parse error');
+                }
+                add_row(e.target.value, res.price);
+                e.target.value = '';
+                e.target.innerHTML = '';
+            } catch(e){
+                console.log(e);
             }
-            res = await res.json()
-            if (!res.exists){
-                return;
-            }
-            add_row(e.target.value, res.price);
-            e.target.value = '';
-            e.target.innerHTML = '';
         }
         
         function add_row(ticker, price){
+            if(ticker in cart_data){
+                return;
+            }
             cart_data[ticker] = 1;
             let tr = document.createElement('tr');
-            tr.appendChild(createElement('td', {innerHTML:ticker}, {}));
-            tr.appendChild(createElement('td', {innerHTML:price}, {'data-ticker':ticker}));
+            tr.appendChild(createElement('td', {innerHTML:ticker, value:ticker}, {class:'ticker'}));
+            tr.appendChild(createElement('td', {innerHTML:price, value:price}, {class:'price'}));
             
             let amount = createElement(
                 'input',
@@ -136,18 +146,20 @@
                     min:'1',
                     value:'1'
                 },
-                {}
+                {class:'amount'}
             );
             amount.addEventListener('click', closure);
             let td = document.createElement('td');
             td.appendChild(amount);
             tr.appendChild(td);
-
-            tr.appendChild(createElement('td',{innerHTML: 1 * price},{}));
+            
+            var total = createElement('td',{innerHTML: price, value: price},{class:'total'})
+            tr.appendChild(total);
             cart.appendChild(tr);
-
+            
             function closure(e){
-                total.innerHTML = e.target.value * price;
+                total.innerHTML = parseInt(e.target.value * price);
+                total.value = parseInt(e.target.value * price);
                 cart_data[ticker] = e.target.value; 
             }
         }
@@ -168,6 +180,31 @@
             return cookieValue;
         }
 
+        async function update_price(){
+            var rows = document.querySelectorAll('tbody tr');
+            for (row of rows){
+                var ticker = row.querySelector('.ticker').value;
+                var amount = row.querySelector('.amount').value;
+                var res = await fetch(
+                    (window.location.href + 'validate?ticker=' + ticker),
+                    {
+                        method: "GET"
+                    }
+                );
+                if (res.status != 200){
+                    throw new Error('Validate response not 200');
+                }
+                res = await res.json()
+                if (!res.exists){
+                    throw new Error('json parse error');
+                }
+                row.querySelector('.price').value = res.price;
+                row.querySelector('.price').innerHTML = res.price;
+                row.querySelector('.total').value = parseInt(res.price * amount);
+                row.querySelector('.total').innerHTML = parseInt(res.price * amount);
+                
+            }
+        }
     </script>
     <style>
         #search {
@@ -194,6 +231,7 @@
         border-collapse: collapse;
         border: 1px solid #e0e0e0;
         margin-bottom: 10px;
+        min-height: 50%;
         }
     
         .holdings-table th {
@@ -209,6 +247,7 @@
         .holdings-table td {
             padding: 15px 12px;
             border-bottom: 1px solid #e0e0e0;
+            width: 25%;
         }
         
         .holdings-table tr:hover {
