@@ -30,7 +30,7 @@
         const checkout = document.querySelector('#checkout');
         const search_results = document.querySelector('#search-results');
         const cart_data = {};
-        input.addEventListener('search', add_to_cart);
+        input.addEventListener('keyup', (e)=>{console.log(e);if(e.keyCode == 13){add_to_cart(e)}});
         input.addEventListener('input', search);
         var timer_id = setInterval(update_price, 5000);
         //send to checkout view, cart_data needs to be Dict[ticker, qty]
