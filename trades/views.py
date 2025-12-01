@@ -1,6 +1,5 @@
 from decimal import Decimal
 from datetime import date, datetime, timedelta
-
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
 from django.db.models import Min
