@@ -71,7 +71,7 @@
                 {% for holding in holdings %}
                 <tr>
                     <td><strong>{{ holding.ticker }}</strong></td>
-                    <td>{{ holding.quantity }}</td>
+                    <td class="holding-quantity">{{ holding.quantity }}</td>
                     <td>${{ holding.avg_cost_basis|floatformat:2 }}</td>
                     <td data-symbol="{{ holding.ticker }}" data-field="price">loading…</td>
                     <td data-symbol="{{ holding.ticker }}" data-field="value">—</td>
